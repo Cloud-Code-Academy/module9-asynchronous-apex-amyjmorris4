@@ -18,8 +18,11 @@
  * Trailhead Module: https://trailhead.salesforce.com/content/learn/modules/asynchronous_apex/async_apex_scheduled
  * 
  * Note: To make full use of this class, ensure that the NextStepBatch class is implemented and operational.
+ * nextStepSchedule_testExecute (currently commented out): 
+ *    - Will test the scheduled job once the NextStepSchedule class is implemented. This test checks if the NextStep fields are correctly updated in both Account and Opportunity objects after the scheduled job execution.
+ *    - Manually setup the scheduled job in Salesforce to run the NextStepSchedule class.
  */
-public with sharing class NextStepSchedule {
+public with sharing class NextStepSchedule implements Schedulable {
 
     /*
      * Update/Uncomment the template code to create a method
@@ -27,8 +30,8 @@ public with sharing class NextStepSchedule {
      * Configure and schedule the job using the Apex Scheduler in Salesforce Setup
      * Code to execute the batch job should not need to change other than uncommenting the code
      */
-    //[public | private ] [static] data_type execute (input parameters) {
-        //NextStepBatch batch = new NextStepBatch(); 
-        //Database.executeBatch(batch);
-    //}
+    public void execute(SchedulableContext sc) {
+        NextStepBatch batch = new NextStepBatch(); 
+        Database.executeBatch(batch);
+    }
 }
