@@ -17,52 +17,70 @@
  * 
  * Note: The class below contains placeholders for implementing a queueable job to update accounts and opportunities.
  */
-public with sharing class NextStepQueueable {
+public with sharing class NextStepQueueable implements Queueable {
 
-    // Member variable to store the accounts
-    private Map<Id,Account> accounts;
+    private Map<Id, Account> accounts;
 
-    // Constructor to accept the accounts
-    public NextStepQueueable(Map<Id,Account> accounts) {
-        // Store the accounts in a member variable
+    public NextStepQueueable(Map<Id, Account> accounts) {
+        this.accounts = accounts;
     }
 
-    // Method to queue the job
     public static void enqueueJob() {
-        // Get 10 accounts with Next Step populated
+        List<Account> accountsList = [SELECT Id, Name, Next_Step__c FROM Account WHERE Next_Step__c != NULL LIMIT 10];
+        Map<Id, Account> accounts = new Map<Id, Account>(accountsList);
 
-        // If there are any accounts, queue the job using System.enqueueJob
+        if (accounts.size() > 0) {
+            System.enqueueJob(new NextStepQueueable(accounts));
+        }
     }
 
-    /*
-     * Update/Uncomment the template code to create a method
-     * Method to execute the queueable job
-     */
-    //[public | private ] [static] data_type execute (input parameters) {
-        // Get the accounts from the member variable
+    public void execute(QueueableContext context) {
+        Map<Id, Account> accounts = this.accounts;
 
-            // Remove the Next Step using the helper method
+        // Convert Map<Id, Account> to List<SObject>
+        List<SObject> accountSObjectList = new List<SObject>();
+        accountSObjectList.addAll(accounts.values());
 
-        // Update the accounts
+        // Remove 'Next Step' from Accounts
+        removeNextStepFromAccountsAndOpportunities(accountSObjectList);
 
-        // Get the opportunities related to the accounts
+        // Update Accounts
+        update accounts.values();
 
-            // Remove the Next Step using the helper method
+        // Query related Opportunities
+        List<Opportunity> relatedOpportunities = [SELECT Id, Name, NextStep FROM Opportunity WHERE AccountId IN :accounts.keySet()];
 
-        // Update the opportunities
+        // Convert List<Opportunity> to List<SObject>
+        List<SObject> opportunitySObjectList = new List<SObject>();
+        opportunitySObjectList.addAll(relatedOpportunities);
 
-        // Call the enqueueJob method to queue another job to process more records.
-    //}
+        // Remove 'Next Step' from Opportunities
+        removeNextStepFromAccountsAndOpportunities(opportunitySObjectList);
 
-    // Helper method to remove the Next Step
-    // Overloaded method to accept an opportunity
+        // Update Opportunities
+        update relatedOpportunities;
+
+        // Queue the next job
+        enqueueJob();
+    }
+
     private static void removeNextStep(Opportunity opp) {
         opp.NextStep = null;
     }
 
-    // Helper method to remove the Next Step
-    // Overloaded method to accept an account
     private static void removeNextStep(Account acc) {
         acc.Next_Step__c = null;
     }
+
+    private void removeNextStepFromAccountsAndOpportunities(List<SObject> records) {
+        for (SObject record : records) {
+            if (record.getSObjectType() == Account.sObjectType) {
+                removeNextStep((Account) record);
+            } else if (record.getSObjectType() == Opportunity.sObjectType) {
+                removeNextStep((Opportunity) record);
+            }
+        }
+    }
 }
+
+

@@ -5,6 +5,9 @@
  * Update the Next Step field on all accounts and opportunities in the org to 'Batching the next meetings together.' 
  * Send an email to all active users
  * 
+ *  nextStepBatch_testUpdateAllNextStep: 
+ *    - Tests the batch class operation for updating NextStep fields in Account and Opportunity.
+ * 
  * Benefits of using Batch Apex:
  * 
  * 1. Large Data Volumes: Batch Apex is specifically tailored to handle large data volumes (LDV). It allows processing of records in batches, making it suitable for bulk processing, especially when dealing with millions of records.
@@ -22,27 +25,28 @@ public with sharing class NextStepBatch implements Database.Batchable<sObject>{
 
     public Database.QueryLocator start(Database.BatchableContext bc){
         // Query for all accounts and return the query locator.
-        return null; // Update null with the query locator
+        return Database.getQueryLocator([SELECT Id FROM Account]);
     }
     
     public void execute(Database.BatchableContext bc, List<Account> scope){
+        //Update the Next Step field on each record in the batch scope
         final String BATCH_NEXT_STEP = 'Batching the next meetings together.';
 
-        // Update the Next Step field on each record in the batch scope.
+        for (Account acc : scope) {
+            acc.Next_Step__c = BATCH_NEXT_STEP;
+        }
 
-        // Loop through the scope account records
+        // Update the accounts in the database
+        update scope;
 
-            // Set the Next Step field to 'Batching the next meetings together.'
-
-        // Update the account records in this batch scope
-        
-        // Query for all opportunities related to the accounts in this batch scope
+        //Query for all Opportunitites related to the Accounts in this batch scope
+        List<Opportunity> opps = [SELECT Id, AccountId FROM Opportunity WHERE AccountId IN :scope];
 
         // Loop through the opportunity records
-
-            // Set the Next Step field to 'Batching the next meetings together.'
-
-        // Update the opportunity records
+        for (Opportunity opp : opps) {
+            opp.NextStep = BATCH_NEXT_STEP;
+        }
+        update opps;
 
     }
     
@@ -50,8 +54,13 @@ public with sharing class NextStepBatch implements Database.Batchable<sObject>{
         final List<User> USERS = [SELECT Id, Name, Email FROM User WHERE IsActive = true AND (NOT Email LIKE 'autoproc%')]; // DO NOT CHANGE
 
         // Get the email addresses of all active users
+        Set<String> emails = new Set<String>();
+        for (User user : USERS) {
+            emails.add(user.Email);
+        }
 
-            // Pass the set of active user emails to the sendEmailToActiveUsers method
+        // Send an email to all active users
+        sendEmailToActiveUsers(emails);
     }
 
     // Helper method to send an email to all emails in the set
